@@ -29,3 +29,30 @@ Each JSON request has two paramaters:
    - `GET` requests. These are requests to fetch a resource at a certain endpoint.
    - `CMP` requests. These compare the state of a local file against the remote.
    - `PUSH` requests. These push a file to a certain endpoint in the remotes root. Push requests will override any content at the endpoint.
+  
+### GET
+Each GET request must contain a body with the following context:
+```json
+{
+   rel_endpoint: "path/to/resource
+}
+```
+The request returns a status code (0 for success) alongside the content of the resource at the given endpoint.
+The target can be any of the following filetypes:
+- `.txt`
+
+### CMP
+Each CMP request must contain a body with the following context:
+```json
+{
+   rel_endpoint: "path/to/resource,
+   hash: some_hash
+   meta_data: [
+       entry1,
+       entry2
+   ]
+}
+```
+The request returns a status code (10 to 14 for success) representing the state of the remote compared to the local state. The request compares the hash of a local resource against the hash of the resource in the remote, and the metadata of the local resource against the metadata of the remote resource.
+The target can be any of the following filetypes:
+- `.txt`
