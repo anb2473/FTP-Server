@@ -3,8 +3,8 @@ import json
 from re import L
 from ..dispatcher import Dispatcher
 from pathlib import Path
-from .hasher.txt_hasher import TxtHasher
-from .hasher.hasher import Hasher
+from ..hasher.txt_hasher import TxtHasher
+from ..hasher.hasher import Hasher
 
 class BadRequestException(Exception):
     def __init__(self, message):

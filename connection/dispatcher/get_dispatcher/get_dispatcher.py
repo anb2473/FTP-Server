@@ -21,7 +21,7 @@ class GetDispatcher(Dispatcher):
     def __init__(self, root_path):
         super().__init__(root_path)
         self.file_processor_registry = {
-                "txt": TxtProcessor
+                ".txt": TxtProcessor
             }
 
     def execute(self, body, res):
@@ -31,7 +31,7 @@ class GetDispatcher(Dispatcher):
         
         absolute_path = self.root_path / Path(rel_endpoint)
         if not absolute_path.exists():
-            raise EndpointNotFoundException("Failed to fetch endpoint in root", absolute_path)
+            raise EndpointNotFoundException(f"Failed to fetch endpoint in root, {absolute_path}", absolute_path)
 
         suffix = absolute_path.suffix
         file_processor = self.file_processor_registry.get(suffix)

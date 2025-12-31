@@ -6,7 +6,7 @@ from session_manager import SessionManager
 from pathlib import Path
 
 def validate_root():
-    root_path = Path(ROOT_PATH)
+    root_path = Path(ROOT_PATH).resolve()
     root_path.mkdir(parents=True, exist_ok=True)
     return root_path
 
@@ -19,10 +19,13 @@ class Server:
         self.sock.listen(MAX_CLIENT_QUEUE)
         self.pool = ThreadPoolExecutor(max_workers=MAX_THREAD_POOL)
         self.session_manager = SessionManager()
+        print(f"Starting server on port {PORT}")
 
     def listen(self):
         while self.running:
+            print("Listening for connections")
             conn, addr = self.sock.accept()
+            print(f"Connection from {addr}")
             session = ConnectionSession(conn, addr, self.root_path)
             future = self.pool.submit(session.run)
             self.session_manager.track(addr, future)

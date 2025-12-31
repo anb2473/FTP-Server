@@ -20,11 +20,11 @@ class PushDispatcher(Dispatcher):
             }
 
     def execute(self, body, res):
-        push_endpoint = body.get("push_endpoint")
-        if not push_endpoint:
+        rel_endpoint = body.get("rel_endpoint")
+        if not rel_endpoint:
             raise BadRequestException("Push request without endpoint")
 
-        rel_path = Path(push_endpoint)
+        rel_path = Path(rel_endpoint)
         suffix = rel_path.suffix
         
         content = body.get("content")
