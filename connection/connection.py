@@ -1,16 +1,7 @@
 import json
+from .exception import NoRequestTypeException, NoBodyException, ResolutionFailedException
 from .resolution import Resolution
 from .dispatcher.dispatcher_registry import pull_dispatcher
-
-class NoRequestTypeException(Exception):
-    def __init__(self, message, json_req):
-        super().__init__(message)
-        self.req = json_req
-
-class NoBodyException(Exception):
-    def __init__(self, message, json_req):
-        super().__init__(message)
-        self.req = json_req
 
 class ConnectionSession:
     def __init__(self, conn, addr, root_path):
@@ -19,6 +10,17 @@ class ConnectionSession:
         self.addr = addr
         self.root_path = root_path
 
+    def package_err(self, err):
+        err_name = type(err).__name__
+        err_message = str(err)
+        attributes = vars(err)
+
+        return {
+                "err_name": err_name,
+                "err_message": err_message,
+                "attributes": attributes
+            }
+
     def run(self):
         while self.running:
             reqs = self.conn.recv(1024).decode()
@@ -26,7 +28,13 @@ class ConnectionSession:
                 continue
 
             json_req = json.loads(reqs)
-            self.unpack(json_req, self.dispatch)
+            try:
+                self.unpack(json_req, self.dispatch)
+            except ResolutionFailedException:
+                raise
+            except Exception as err:
+                res = Resolution(self.conn)
+                res.status(1, json.dumps(self.package_err(err)))
     
     def unpack(self, json_req, dispatcher):
         # Req types: GET (pull file from registry), CMP (compare file against registry), PUSH (Push new file to registry)

@@ -1,21 +1,9 @@
 from pathlib import Path
+import json
 from ..dispatcher import Dispatcher
-from .file_processor.file_processor import FileProcessor
-from .file_processor.txt_processor import TxtProcessor
-
-class BadRequestException(Exception):
-    def __init__(self, message):
-        super().__init__(message)
-
-class FileProcessorNotFoundException(Exception):
-    def __init__(self, message, suffix):
-        super().__init__(message)
-        self.suffix = suffix
-
-class EndpointNotFoundException(Exception):
-    def __init__(self, message, endpoint):
-        super().__init__(message)
-        self.rel_endpoint = endpoint
+from .processor.processor import FileProcessor
+from .processor.txt_processor import TxtProcessor
+from ...exception import BadRequestException, FileProcessorNotFoundException
 
 class GetDispatcher(Dispatcher):
     def __init__(self, root_path):
@@ -24,14 +12,21 @@ class GetDispatcher(Dispatcher):
                 ".txt": TxtProcessor
             }
 
+    def read_metadata(self, absolute_path):
+        metadata_path = absolute_path.with_name(absolute_path.name + ".meta")
+        # metadata will be autocreated when a PUSH request is sent
+        # as such metadata not found case can be ignored
+        if not metadata_path.exists() or not metadata_path.is_file():
+            return {} 
+        metadata = metadata_path.read_text(encoding="utf-8")
+        return json.loads(metadata)
+
     def execute(self, body, res):
         rel_endpoint = body.get("rel_endpoint")        
         if not rel_endpoint:
             raise BadRequestException("Fetch request without endpoint")
         
         absolute_path = self.root_path / Path(rel_endpoint)
-        if not absolute_path.exists():
-            raise EndpointNotFoundException(f"Failed to fetch endpoint in root, {absolute_path}", absolute_path)
 
         suffix = absolute_path.suffix
         file_processor = self.file_processor_registry.get(suffix)
@@ -41,4 +36,9 @@ class GetDispatcher(Dispatcher):
         assert issubclass(file_processor, FileProcessor)
         instance = file_processor(absolute_path)
 
-        return res.status(0, instance.process()) 
+        metadata = self.read_metadata(absolute_path)
+
+        return res.status(40, json.dumps({
+            "content": instance.process(), 
+            "metadata": metadata
+        })) 

@@ -1,16 +1,9 @@
+import json
 from ..dispatcher import Dispatcher
 from .persister.txt_persister import TxtPersister
 from .persister.persister import Persister
 from pathlib import Path
-
-class BadRequestException(Exception):
-    def __init__(self, message):
-        super().__init__(message)
-
-class PersisterNotFoundException(Exception):
-    def __init__(self, message, suffix):
-        super().__init__(message)
-        self.suffix = suffix
+from ...exception import BadRequestException, PersisterNotFoundException
 
 class PushDispatcher(Dispatcher):
     def __init__(self, root_path):
@@ -40,7 +33,5 @@ class PushDispatcher(Dispatcher):
         assert issubclass(persister, Persister)
         instance = persister(absolute_path)
 
-        ret_code = instance.push(content)
-        if ret_code == 0:
-            return res.status(ret_code, "Push successful")
-        return res.status(ret_code, "Push failed")
+        status = instance.push(content)
+        return res.status(status.code, json.dumps(status.message))

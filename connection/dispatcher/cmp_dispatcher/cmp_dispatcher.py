@@ -1,59 +1,11 @@
 import hmac
 import json
-from re import L
 from ..dispatcher import Dispatcher
 from pathlib import Path
 from ..hasher.txt_hasher import TxtHasher
 from ..hasher.hasher import Hasher
-
-class BadRequestException(Exception):
-    def __init__(self, message):
-        super().__init__(message)
-
-class FileProcessorNotFoundException(Exception):
-    def __init__(self, message, suffix):
-        super().__init__(message)
-        self.suffix = suffix
-
-class EndpointNotFoundException(Exception):
-    def __init__(self, message, endpoint):
-        super().__init__(message)
-        self.rel_endpoint = endpoint
-
-class MetaNotFoundException(Exception):
-    def __init__(self, message, meta_path):
-        super().__init__(message)
-        self.meta_path = meta_path
-
-class Status:
-    def __init__(self):
-        self.message = "uncomparable"
-        self.code = 1
-
-class StatusSynced(Status):
-    def __init__(self):
-        self.message = "Local and remote synced"
-        self.code = 10
-
-class StatusLocalAhead(Status):
-    def __init__(self):
-        self.message = "Local ahead of remote"
-        self.code = 11
-
-class StatusRemoteAhead(Status):
-    def __init__(self):
-        self.message = "remote ahead of local"
-        self.code = 12
-
-class StatusDivergent(Status):
-    def __init__(self):
-        self.message = "remote and local diverged"
-        self.code = 13
-
-class StatusUnrelated(Status):
-    def __init__(self):
-        self.message = "remote and local unrelated"
-        self.code = 14
+from ...exception import FileProcessorNotFoundException, BadRequestException, MetaNotFoundException, EndpointNotFoundException
+from ...status import StatusDivergent, StatusUnrelated, StatusSynced, StatusRemoteAhead, StatusLocalAhead
 
 class CmpDispatcher(Dispatcher):
     def __init__(self, root_path):
@@ -130,4 +82,4 @@ class CmpDispatcher(Dispatcher):
         status = StatusSynced()
         if not same_hash:
             status = self.cmp_meta(body, absolute_path)
-        return res.status(status.code, status.message)
+        return res.status(status.code, json.dumps(status.message))
