@@ -1,9 +1,8 @@
 from ..dispatcher import Dispatcher
-import json
 from .file_processor.txt_processor import TxtProcessor
 from .file_processor.file_processor import FileProcessor
 from pathlib import Path
-from ...exception import BadRequestException, EndpointNotFoundException, FileProcessorNotFoundException
+from ...exception import BadRequestException, FileProcessorNotFoundException
 
 class DeleteDispatcher(Dispatcher):
     def __init__(self, root_path):
@@ -12,14 +11,7 @@ class DeleteDispatcher(Dispatcher):
                 ".txt": TxtProcessor
                 }
 
-    def execute(self, body, res):
-        rel_endpoint = body.get("rel_endpoint")
-        if not rel_endpoint:
-            raise BadRequestException("DELETE request without relative endpoint (must include \"rel_endpoint\")")
-
-        # Guard clauses to validate path directly in processor
-        absolute_path = self.root_path / Path(rel_endpoint)
-
+    def delete_path(self, absolute_path):
         suffix = absolute_path.suffix
         file_processor = self.file_processor_registry.get(suffix)
         if not file_processor:
@@ -29,4 +21,15 @@ class DeleteDispatcher(Dispatcher):
         instance = file_processor(absolute_path)
 
         status = instance.process()
-        return res.status(status.code, json.dumps(status.message))
+        return status
+
+    def execute(self, body, res):
+        rel_endpoint = body.get("rel_endpoint")
+        if not rel_endpoint:
+            raise BadRequestException("DELETE request without relative endpoint (must include \"rel_endpoint\")")
+
+        # Guard clauses to validate path directly in processor
+        absolute_path = self.root_path / Path(rel_endpoint)
+
+        status = self.delete_path(absolute_path)
+        return res.status(status.code, status.message)

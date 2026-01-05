@@ -1,4 +1,5 @@
 from .exception import ResolutionFailedException
+import json
 
 class Resolution:
     def __init__(self, conn):
@@ -6,7 +7,7 @@ class Resolution:
        
     def status(self, status, message):
         header = status.to_bytes(2, byteorder='big')
-        payload = message.encode('utf-8')
+        payload = json.dumps(message).encode('utf-8')
 
         try:
             self.conn.sendall(header + payload)

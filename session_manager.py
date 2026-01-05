@@ -10,7 +10,7 @@ class SessionManager:
             # future.result will throw an error if the thread failed
             future.result()
         except Exception:
-            print(f"Connection error: address {addr}")
+            print(f"Error occured in connection with client (address: {addr})")
             traceback.print_exc()
 
     def track(self, addr, future):

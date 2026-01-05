@@ -33,9 +33,11 @@ class FileProcessorNotFoundException(Exception):
         self.suffix = suffix
 
 class EndpointNotFoundException(Exception):
-    def __init__(self, message, endpoint):
+    def __init__(self, message, endpoint, rel_endpoint, root_path):
         super().__init__(message)
-        self.rel_endpoint = endpoint
+        self.absolute_path = endpoint
+        self.rel_endpoint = rel_endpoint
+        self.root_path = root_path
 
 class ResourceIsDirectoryException(Exception):
     def __init__(self, message, absolute_path):

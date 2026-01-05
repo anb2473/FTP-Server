@@ -5,16 +5,10 @@ import json
 from ...hasher.txt_hasher import TxtHasher
 
 class TxtPersister(Persister):
-    def __init__(self, path):
-        super().__init__(path)
+    def __init__(self, path, rel_endpoint, root_path):
+        super().__init__(path, rel_endpoint, root_path)
 
     def push(self, content):
-        if not self.path.exists():
-            raise EndpointNotFoundException("Cannot GET nonexistent endpoint", self.path)
-
-        if not self.path.is_file():
-            raise ResourceIsDirectoryException("Cannot GET directory as \".txt\"", self.path)
-
         self.path.write_text(content, encoding="utf-8")
         
         metadata_path = self.path.with_name(self.path.name + ".meta")
@@ -24,7 +18,7 @@ class TxtPersister(Persister):
 
         assert type(metadata) is list
         
-        hasher = TxtHasher(self.path)
+        hasher = TxtHasher(self.path, self.rel_endpoint, self.root_path)
         hash = hasher.hash()
         metadata.append(hash)
 

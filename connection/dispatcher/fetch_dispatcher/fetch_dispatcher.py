@@ -1,26 +1,36 @@
 from connection.dispatcher.dispatcher import Dispatcher
-
+from ..hasher.txt_hasher import TxtHasher
+from ..hasher.hasher import Hasher
+from ...exception import FileProcessorNotFoundException
 
 class FetchDispatcher(Dispatcher):
     def __init__(self, root_path):
         self.root_path = root_path
 
+        self.hasher_registry = {
+                ".txt": TxtHasher
+            }
+    
     def load_dir(self, contents):
         loaded = {}
         for path in contents:
             if path.is_file():
-                metadata_path = path.with_name(path.name + ".meta")
-
-                metadata = {}
-                # metadata automatically created on PUSH request
-                # as such metadata not found case can be ignored
-                if not metadata_path.exists() or not metadata_path.is_file():
-                    metadata = metadata_path.read_text(encoding="utf-8")
-
-                loaded[path.name] = metadata
+                suffix = path.suffix
+                if suffix == ".meta":
+                    continue
+                hasher = self.hasher_registry.get(suffix)
+                if not hasher:
+                    raise FileProcessorNotFoundException("Failed to load hasher - unsupported filetype", suffix)
+             
+                assert issubclass(hasher, Hasher)
+                instance = hasher(path, path, self.root_path)
+        
+                stored_hash = instance.hash()
+                loaded[path.name] = stored_hash
             elif not path.is_file():
                 subdir_contents = path.iterdir()
                 loaded[path.name] = self.load_dir(subdir_contents)
+        return loaded
 
     def execute(self, body, res):
         contents = self.root_path.iterdir()

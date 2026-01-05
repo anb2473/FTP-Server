@@ -1,15 +1,18 @@
 from pathlib import Path
 import json
+
+from .file_processor.dir_processor import DirProcessor
 from ..dispatcher import Dispatcher
-from .processor.processor import FileProcessor
-from .processor.txt_processor import TxtProcessor
+from .file_processor.file_processor import FileProcessor
+from .file_processor.txt_processor import TxtProcessor
 from ...exception import BadRequestException, FileProcessorNotFoundException
 
 class GetDispatcher(Dispatcher):
     def __init__(self, root_path):
         super().__init__(root_path)
         self.file_processor_registry = {
-                ".txt": TxtProcessor
+                ".txt": TxtProcessor,
+                "": DirProcessor
             }
 
     def read_metadata(self, absolute_path):
@@ -21,24 +24,30 @@ class GetDispatcher(Dispatcher):
         metadata = metadata_path.read_text(encoding="utf-8")
         return json.loads(metadata)
 
-    def execute(self, body, res):
-        rel_endpoint = body.get("rel_endpoint")        
-        if not rel_endpoint:
-            raise BadRequestException("Fetch request without endpoint")
-        
-        absolute_path = self.root_path / Path(rel_endpoint)
-
+    def read_path(self, absolute_path, rel_endpoint):
         suffix = absolute_path.suffix
         file_processor = self.file_processor_registry.get(suffix)
         if not file_processor:
             raise FileProcessorNotFoundException("Failed to load file processor - unsupported filetype", suffix)
       
         assert issubclass(file_processor, FileProcessor)
-        instance = file_processor(absolute_path)
+        instance = file_processor(absolute_path, rel_endpoint, self.root_path)
+
+        content = instance.process()
+        return content
+
+    def execute(self, body, res):
+        rel_endpoint = body.get("rel_endpoint")        
+        if not rel_endpoint:
+            raise BadRequestException("GET request without endpoint")
+        
+        absolute_path = self.root_path / Path(rel_endpoint)
 
         metadata = self.read_metadata(absolute_path)
 
-        return res.status(40, json.dumps({
-            "content": instance.process(), 
+        content = self.read_path(absolute_path, rel_endpoint)
+
+        return res.status(40, {
+            "content": content, 
             "metadata": metadata
-        })) 
+        })

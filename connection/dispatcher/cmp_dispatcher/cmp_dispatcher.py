@@ -4,7 +4,7 @@ from ..dispatcher import Dispatcher
 from pathlib import Path
 from ..hasher.txt_hasher import TxtHasher
 from ..hasher.hasher import Hasher
-from ...exception import FileProcessorNotFoundException, BadRequestException, MetaNotFoundException, EndpointNotFoundException
+from ...exception import FileProcessorNotFoundException, BadRequestException, MetaNotFoundException
 from ...status import StatusDivergent, StatusUnrelated, StatusSynced, StatusRemoteAhead, StatusLocalAhead
 
 class CmpDispatcher(Dispatcher):
@@ -14,14 +14,14 @@ class CmpDispatcher(Dispatcher):
                 ".txt": TxtHasher
             }
 
-    def check_hash(self, body, absolute_path):
+    def check_hash(self, body, absolute_path, rel_endpoint):
         suffix = absolute_path.suffix
         hasher = self.hasher_registry.get(suffix)
         if not hasher:
             raise FileProcessorNotFoundException("Failed to load hasher - unsupported filetype", suffix)
       
         assert issubclass(hasher, Hasher)
-        instance = hasher(absolute_path)
+        instance = hasher(absolute_path, rel_endpoint, self.root_path)
 
         stored_hash = instance.hash()
         recieved_hash = body.get("hash")
@@ -74,12 +74,10 @@ class CmpDispatcher(Dispatcher):
             raise BadRequestException("Hash request without endpoint")
         
         absolute_path = self.root_path / Path(rel_endpoint)
-        if not absolute_path.exists():
-            raise EndpointNotFoundException("Failed to fetch endpoint in root", absolute_path)
 
-        same_hash = self.check_hash(body, absolute_path)
+        same_hash = self.check_hash(body, absolute_path, rel_endpoint)
 
         status = StatusSynced()
         if not same_hash:
             status = self.cmp_meta(body, absolute_path)
-        return res.status(status.code, json.dumps(status.message))
+        return res.status(status.code, status.message)
